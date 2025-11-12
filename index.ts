@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import { ApnsClient, Notification, PushType } from "apns2";
 import * as dotenv from "dotenv";
@@ -8,19 +7,20 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Add security
+// --- Security Middleware ---
 app.use((req, res, next) => {
   const auth = req.headers.authorization;
   if (auth !== `Bearer ${process.env.WORKER_SECRET}`) {
+    console.warn("🚫 Unauthorized request blocked");
     return res.status(403).json({ error: "Forbidden" });
   }
   next();
 });
 
-// Load and normalize private key
+// --- Load and normalize private key ---
 const signingKey = (process.env.APN_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
-// Keep one persistent APNs connection alive
+// --- Initialize persistent APNs client once ---
 const apnClient = new ApnsClient({
   team: process.env.APN_TEAM_ID as string,
   keyId: process.env.APN_KEY_ID as string,
@@ -30,7 +30,7 @@ const apnClient = new ApnsClient({
   requestTimeout: 30000,
 });
 
-// --- Helper: Safe send with retry on socket errors
+// --- Helper: safe send with retry ---
 async function safeSend(notification: any, retries = 1) {
   try {
     await apnClient.send(notification);
@@ -47,45 +47,64 @@ async function safeSend(notification: any, retries = 1) {
   }
 }
 
+// --- Main Route ---
 app.post("/send-apn", async (req, res) => {
+  console.log("📩 Incoming push request");
+
+  const startTime = Date.now();
   try {
     const { tokens, payload, type } = req.body;
     if (!tokens?.length) throw new Error("Missing tokens");
 
-    for (const token of tokens) {
-      let notification;
+    console.log(`➡️ Sending ${type} notification to ${tokens.length} tokens`);
 
-      if (type === "silent") {
-        notification = new Notification(token, {
-          aps: { "content-available": 1 },
-          type: PushType.background,
-          topic: process.env.APN_BUNDLE_ID,
-        });
-      } else {
-        notification = new Notification(token, {
-          aps: {
-            alert: {
-              title: payload?.title ?? "Coordiy Update",
-              body: payload?.body ?? "Event changed",
+    // Send in parallel to keep request under Railway timeout
+    await Promise.all(
+      tokens.map(async (token: any) => {
+        let notification;
+
+        if (type === "silent") {
+          notification = new Notification(token, {
+            aps: { "content-available": 1 },
+            type: PushType.background,
+            topic: process.env.APN_BUNDLE_ID,
+          });
+        } else {
+          notification = new Notification(token, {
+            aps: {
+              alert: {
+                title: payload?.title ?? "Coordiy Update",
+                body: payload?.body ?? "Event changed",
+              },
+              sound: "default",
             },
-            sound: "default",
-          },
-          topic: process.env.APN_BUNDLE_ID,
-        });
-      }
+            topic: process.env.APN_BUNDLE_ID,
+          });
+        }
 
-      await safeSend(notification);
-      console.log(`✅ Sent ${type} APN to ${token}`);
-    }
+        await safeSend(notification);
+        console.log(`✅ Sent ${type} APN to ${token}`);
+      })
+    );
 
-    res.status(200).json({ success: true });
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`✅ All ${type} notifications sent in ${elapsed}s`);
+    return res.status(200).json({ success: true, duration: elapsed });
   } catch (err: any) {
     console.error("❌ Error in /send-apn:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// --- Start server
+// --- Catch-all error logging ---
+process.on("unhandledRejection", (reason) => {
+  console.error("🚨 Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("🚨 Uncaught Exception:", err);
+});
+
+// --- Start server ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`🚀 APN Worker running on port ${PORT}`)
