@@ -156,7 +156,6 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-
 // --- Catch-all error logging ---
 process.on("unhandledRejection", (reason) => {
   console.error("🚨 Unhandled Rejection:", reason);
