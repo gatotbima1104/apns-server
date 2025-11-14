@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Event Cancelled</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .details {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>⚠️ Event Cancelled</h2>
+        </div>
+
+        <p>Hi {{username}},</p>
+        
+        <p>We regret to inform you that your event <strong>{{eventTitle}}</strong> could not be scheduled and has been <strong>cancelled</strong>.</p>
+
+        <p>This may happen when one or more participants haven’t confirmed their availability.</p>
+        
+        <div class="details">
+            <p><strong>📅 Original Date:</strong> {{eventDate}}</p>
+            <p><strong>🕒 Original Time:</strong> {{eventTime}}</p>
+            <p><strong>📍 Location:</strong> {{eventLocation}}</p>
+        </div>
+
+        <p>You can reschedule the event anytime through your {{appName}} dashboard.</p>
+
+        <div class="footer">
+            <p>This is an automated message from {{appName}}.<br>
+            Need help? Contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

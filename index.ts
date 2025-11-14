@@ -1,6 +1,10 @@
 import express from "express";
 import { ApnsClient, Notification, PushType } from "apns2";
 import * as dotenv from "dotenv";
+import * as nodemailer from "nodemailer";
+import * as handlebars from "handlebars";
+import * as fs from "fs";
+import * as path from "path";
 
 dotenv.config();
 
@@ -92,6 +96,62 @@ app.post("/send-apn", async (req, res) => {
     return res.status(200).json({ success: true, duration: elapsed });
   } catch (err: any) {
     console.error("❌ Error in /send-apn:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/send-email", async (req, res) => {
+  try {
+    const {
+      to,
+      template,
+      subject,
+      user,
+      pass,
+      eventTitle,
+      eventDate,
+      eventTime,
+      eventLocation,
+      eventId,
+    } = req.body;
+
+    if (!to || !template || !subject)
+      return res.status(400).json({ error: "Missing params" });
+
+    // Load template
+    const templatePath = path.join(process.cwd(), `templates/${template}`);
+    const file = fs.readFileSync(templatePath, "utf8");
+    const compiled = handlebars.compile(file);
+
+    const html = compiled({
+      username: to,
+      eventTitle,
+      eventDate,
+      eventTime,
+      eventLocation,
+      appName: "Cordy",
+      supportEmail: user,
+      icalLink: eventId
+        ? `https://coordy-prod.vercel.app/api/calendar/${eventId}.ics`
+        : "",
+    });
+
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      auth: { user, pass },
+    });
+
+    const info = await transporter.sendMail({
+      from: user,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("📧 Email sent:", info.messageId);
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error("❌ Email worker error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
