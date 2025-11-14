@@ -115,6 +115,8 @@ app.post("/send-email", async (req, res) => {
       eventId,
     } = req.body;
 
+    console.log("hitted")
+
     if (!to || !template || !subject)
       return res.status(400).json({ error: "Missing params" });
 
