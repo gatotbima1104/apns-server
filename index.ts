@@ -125,6 +125,10 @@ app.post("/send-email", async (req, res) => {
     const file = fs.readFileSync(templatePath, "utf8");
     const compiled = handlebars.compile(file);
 
+    const icsUrl = eventId
+      ? `https://coordy-prod.vercel.app/api/notification/calendar/${eventId}`
+      : "";
+
     const html = compiled({
       username: to,
       eventTitle,
@@ -133,9 +137,7 @@ app.post("/send-email", async (req, res) => {
       eventLocation,
       appName: "Cordy",
       supportEmail: user,
-      icalLink: eventId
-        ? `https://coordy-prod.vercel.app/api/calendar/${eventId}.ics`
-        : "",
+      icalLink: icsUrl,
     });
 
     const transporter = nodemailer.createTransport({
@@ -148,12 +150,11 @@ app.post("/send-email", async (req, res) => {
     if (eventId) {
       attachments.push({
         filename: `${eventTitle}.ics`,
-        path: `https://coordy-prod.vercel.app/api/calendar/${eventId}`,
+        path: icsUrl, // FIXED HERE
         contentType: "text/calendar; charset=UTF-8; method=REQUEST",
-        // contentDisposition: "attachment",
       });
     }
-
+    
     const info = await transporter.sendMail({
       from: user,
       to,
