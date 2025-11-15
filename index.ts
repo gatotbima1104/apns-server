@@ -150,7 +150,7 @@ app.post("/send-email", async (req, res) => {
         filename: `${eventTitle}.ics`,
         path: `https://coordy-prod.vercel.app/api/calendar/${eventId}`,
         contentType: "text/calendar; charset=UTF-8; method=REQUEST",
-        contentDisposition: "attachment",
+        // contentDisposition: "attachment",
       });
     }
 
