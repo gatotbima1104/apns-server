@@ -143,12 +143,24 @@ app.post("/send-email", async (req, res) => {
       auth: { user, pass },
     });
 
+    const attachments = [];
+
+    if (eventId) {
+      attachments.push({
+        filename: `${eventTitle}.ics`,
+        path: `https://coordy-prod.vercel.app/api/calendar/${eventId}.ics`,
+        contentType: "text/calendar; charset=UTF-8; method=REQUEST"
+      });
+    }
+
     const info = await transporter.sendMail({
       from: user,
       to,
       subject,
       html,
+      attachments
     });
+
 
     console.log("📧 Email sent:", info.messageId);
     return res.json({ success: true });
